@@ -1,0 +1,9 @@
+.idea/
+target/classes/
+target/maven-archiver/
+target/maven-status/
+target/*
+.classpath
+.project
+*.prefs
+/LCD.iml
