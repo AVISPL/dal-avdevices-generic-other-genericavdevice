@@ -355,15 +355,15 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
             for (int i = 0; i < netInterfaces.size(); i++) {
                 JsonNode netif = netInterfaces.get(i);
                 String ifaceName = netif.at(NETIF_URI).asText();
-                statistics.put(NETWORK_GROUP + ifaceName + "MACAddress", netif.at(HW_ADDR_URI).asText());
-                statistics.put(NETWORK_GROUP + ifaceName + "IPv4Address", netif.at(IP_ADDR_V4_URI).asText());
-                statistics.put(NETWORK_GROUP + ifaceName + "IPv6Address", netif.at(IP_ADDR_V6_URI).asText());
-                statistics.put(NETWORK_GROUP + ifaceName + "Netmask", netif.at(NETMASK_URI).asText());
-                statistics.put(NETWORK_GROUP + ifaceName + "Gateway", netif.at(GATEWAY_URI).asText());
+                statistics.put(NETWORK_GROUP + ifaceName + MAC_ADDRESS, netif.at(HW_ADDR_URI).asText());
+                statistics.put(NETWORK_GROUP + ifaceName + IPV4_ADDRESS, netif.at(IP_ADDR_V4_URI).asText());
+                statistics.put(NETWORK_GROUP + ifaceName + IPV6_ADDRESS, netif.at(IP_ADDR_V6_URI).asText());
+                statistics.put(NETWORK_GROUP + ifaceName + NETMASK, netif.at(NETMASK_URI).asText());
+                statistics.put(NETWORK_GROUP + ifaceName + GATEWAY, netif.at(GATEWAY_URI).asText());
 
                 ArrayNode dns = (ArrayNode) netif.at(DNS_URI);
-                statistics.put(NETWORK_GROUP + ifaceName + "DNSPrimary", dns.get(0).asText(""));
-                statistics.put(NETWORK_GROUP + ifaceName + "DNSSecondary", dns.get(1).asText(""));
+                statistics.put(NETWORK_GROUP + ifaceName + DNS_PRIMARY, dns.get(0).asText(""));
+                statistics.put(NETWORK_GROUP + ifaceName + DNS_SECONDARY, dns.get(1).asText(""));
             }
         }
     }

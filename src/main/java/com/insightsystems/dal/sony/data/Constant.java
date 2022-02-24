@@ -67,6 +67,13 @@ public class Constant {
 
     public static final String VOLUME = "Volume";
     public static final String MUTE = "Mute";
+    public static final String MAC_ADDRESS = "MACAddress";
+    public static final String IPV4_ADDRESS = "IPv4Address";
+    public static final String IPV6_ADDRESS = "IPv6Address";
+    public static final String NETMASK = "Netmask";
+    public static final String GATEWAY = "Gateway";
+    public static final String DNS_PRIMARY = "DNSPrimary";
+    public static final String DNS_SECONDARY = "DNSSecondary";
 
     // RCP Actions
     public static final String SET_AUDIO_VOLUME = "setAudioVolume";
