@@ -11,7 +11,6 @@ import com.avispl.symphony.api.dal.dto.monitor.Statistics;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.dal.communicator.RestCommunicator;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableMap;
 import com.insightsystems.dal.sony.data.Constant;
@@ -35,9 +34,6 @@ import static com.insightsystems.dal.sony.data.commands.LCDCommands.*;
  * @see <a href="https://pro-bravia.sony.net/develop/integrate/rest-api/spec/">Sony Rest API Spec</a>
  */
 public class SonyBraviaCommunicator extends RestCommunicator implements Controller, Monitorable {
-    private static final String[] powerSaveModes = new String[]{"off", "low", "high", "pictureOff"};
-    private static final String[] ledIndicatorModes = new String[]{"Demo", "AutoBrightnessAdjust", "Dark", "SimpleResponse", "Off"};
-
     public SonyBraviaCommunicator() {
         this.setBaseUri("sony");
         this.setContentType("application/json");
@@ -76,7 +72,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         stats.put(DATE_TIME_PROPERTY, this.doPost(SYSTEM_URI, getCurrentTime, JsonNode.class).at(DATE_TIME_URI).asText());
         //Power Save Modes
         JsonNode powerSave = this.doPost(SYSTEM_URI, getPowerSavingMode, JsonNode.class);
-        createDropdown(stats, controls, powerSaveModes, powerSaveModes, POWER_SAVE_MODE_PROPERTY, powerSave.at(MODE_0_URI).asText());
+        createDropdown(stats, controls, POWER_SAVE_MODES_LABELS, POWER_SAVE_MODES_VALUES, POWER_SAVE_MODE_PROPERTY, powerSave.at(MODE_0_URI).asText());
         //Stateless Control Buttons
         createButton(stats, controls, REBOOT_PROPERTY, "Reboot", "Rebooting", 10_000L);
         createButton(stats, controls, TERMINATE_APPS_PROPERTY, "Kill Apps", "Killing", 1_000L);
@@ -232,54 +228,32 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         JsonNode widiCount = this.doPost(AV_CONTENT_URI, getContentList
                 .withParams(ImmutableMap.of("stIdx", 0, "cnt", 50, "uri", "extInput:widi")), JsonNode.class).at(RESULT_0_URI);
 
-        if (!hdmiCount.isMissingNode()) {
-            statistics.put("ContentInformation#TotalHDMICount", String.valueOf(hdmiCount.size()));
-            hdmiCount.forEach(jsonNode -> {
-                int portNumber = jsonNode.at("/index").asInt() + 1;
-                statistics.put("ContentInformation#" + "HDMIPort" + portNumber, jsonNode.at(TITLE_URI).asText());
-            });
-        } else {
-            statistics.put("ContentInformation#TotalHDMICount", "Unavailable");
-        }
+        populateContentInformation(hdmiCount, statistics, CONTENT_INFORMATION_TOTAL_HDMI_COUNT, CONTENT_INFORMATION_HDMI_PORT);
+        populateContentInformation(cecCount, statistics, CONTENT_INFORMATION_TOTAL_CEC_COUNT, CONTENT_INFORMATION_CEC_PORT);
+        populateContentInformation(componentCount, statistics, CONTENT_INFORMATION_TOTAL_COMPONENT_COUNT, CONTENT_INFORMATION_COMPONENT_PORT);
+        populateContentInformation(compositeCount, statistics, CONTENT_INFORMATION_TOTAL_COMPOSITE_COUNT, CONTENT_INFORMATION_COMPOSITE_PORT);
+        populateContentInformation(widiCount, statistics, CONTENT_INFORMATION_TOTAL_WIDI_COUNT, CONTENT_INFORMATION_WIDI_PORT);
+    }
 
-        if(!cecCount.isMissingNode()) {
-            statistics.put("ContentInformation#TotalCECCount", String.valueOf(cecCount.size()));
-            cecCount.forEach(jsonNode -> {
+    /**
+     * Populate content information with "Unavailable" value for the contentCount if data is missing
+     * for the given source.
+     *
+     * @param json source
+     * @param statistics to add data to
+     * @param contentCountProperty to put content count information
+     * @param contentPortProperty to put port information to (port number: name)
+     */
+    private void populateContentInformation(JsonNode json, Map<String, String> statistics,
+                                            String contentCountProperty, String contentPortProperty){
+        if (!json.isMissingNode()) {
+            statistics.put(contentCountProperty, String.valueOf(json.size()));
+            json.forEach(jsonNode -> {
                 int portNumber = jsonNode.at("/index").asInt() + 1;
-                statistics.put("ContentInformation#" + "CECPort" + portNumber, jsonNode.at(TITLE_URI).asText());
+                statistics.put(contentPortProperty + portNumber, jsonNode.at(TITLE_URI).asText());
             });
         } else {
-            statistics.put("ContentInformation#TotalCECCount", "Unavailable");
-        }
-
-        if(!componentCount.isMissingNode()) {
-            statistics.put("ContentInformation#TotalComponentCount", String.valueOf(componentCount.size()));
-            componentCount.forEach(jsonNode -> {
-                int portNumber = jsonNode.at("/index").asInt() + 1;
-                statistics.put("ContentInformation#" + "ComponentPort" + portNumber, jsonNode.at(TITLE_URI).asText());
-            });
-        } else {
-            statistics.put("ContentInformation#TotalComponentCount", "Unavailable");
-        }
-
-        if(!compositeCount.isMissingNode()) {
-            statistics.put("ContentInformation#TotalCompositeCount", String.valueOf(compositeCount.size()));
-            compositeCount.forEach(jsonNode -> {
-                int portNumber = jsonNode.at("/index").asInt() + 1;
-                statistics.put("ContentInformation#" + "CompositePort" + portNumber, jsonNode.at(TITLE_URI).asText());
-            });
-        } else {
-            statistics.put("ContentInformation#TotalCompositeCount", "Unavailable");
-        }
-
-        if(!widiCount.isMissingNode()) {
-            statistics.put("ContentInformation#TotalWIDICount", String.valueOf(widiCount.size()));
-            widiCount.forEach(jsonNode -> {
-                int portNumber = jsonNode.at("/index").asInt() + 1;
-                statistics.put("ContentInformation#" + "WIDIPort" + portNumber, jsonNode.at(TITLE_URI).asText());
-            });
-        } else {
-            statistics.put("ContentInformation#TotalWIDICount", "Unavailable");
+            statistics.put(contentCountProperty, "Unavailable");
         }
     }
 
@@ -297,34 +271,33 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
 
         soundSettings.forEach(jsonNode -> {
             String name = jsonNode.at(TARGET_URI).asText();
-            String value = jsonNode.at("/currentValue").asText();
-            statistics.put("SoundSettings#" + StringUtils.capitalize(name), value);
-            if (StringUtils.endsWithIgnoreCase(name, "outputTerminal")) {
-                createDropdown(statistics, controls, new String[] {"Speaker", "SpeakerHDMI", "HDMI", "AudioSystem"},
-                        new String[] {"speaker", "speaker_hdmi", "hdmi", "audioSystem"},
-                        "SoundSettings#" + StringUtils.capitalize(jsonNode.at(TARGET_URI).asText()), value);
+            String value = jsonNode.at(CURRENT_VALUE_URI).asText();
+            statistics.put(SPEAKER_SETTINGS_GROUP + StringUtils.capitalize(name), value);
+            if (StringUtils.endsWithIgnoreCase(name, OUTPUT_TERMINAL)) {
+                createDropdown(statistics, controls, SOUND_SETTINGS_LABELS, SOUND_SETTINGS_VALUES,
+                        SPEAKER_SETTINGS_GROUP + StringUtils.capitalize(jsonNode.at(TARGET_URI).asText()), value);
             }
         });
 
         speakerSettings.forEach(jsonNode -> {
             String name = jsonNode.at(TARGET_URI).asText();
-            String value = jsonNode.at("/currentValue").asText();
+            String value = jsonNode.at(CURRENT_VALUE_URI).asText();
 
-            String propertyName = "SpeakerSettings#" + StringUtils.capitalize(name);
-            if (name.equalsIgnoreCase("tvPosition")) {
-                createDropdown(statistics, controls, new String[] {"TableTop", "WallMount"}, new String[]{"tableTop", "wallMount"},
+            String propertyName = SPEAKER_SETTINGS_GROUP + StringUtils.capitalize(name);
+            if (name.equalsIgnoreCase(TV_POSITION)) {
+                createDropdown(statistics, controls, SPEAKER_SETTINGS_TV_POSITION_LABELS, SPEAKER_SETTINGS_TV_POSITION_VALUES,
                         propertyName, value);
-            } else if (name.equalsIgnoreCase("subwooferLevel")) {
+            } else if (name.equalsIgnoreCase(SUBWOOFER_LEVEL)) {
                 createSlider(statistics, controls, propertyName, 0.0f, 24.0f, Float.parseFloat(value));
-            } else if (name.equalsIgnoreCase("subwooferFreq")) {
+            } else if (name.equalsIgnoreCase(SUBWOOFER_FREQ)) {
                 createSlider(statistics, controls, propertyName, 0.0f, 30.0f, Float.parseFloat(value));
-            } else if (name.equalsIgnoreCase("subwooferPhase")) {
-                createDropdown(statistics, controls, new String[] {"Normal", "Reverse"}, new String[]{"normal", "reverse"},
+            } else if (name.equalsIgnoreCase(SUBWOOFER_PHASE)) {
+                createDropdown(statistics, controls, SPEAKER_SETTINGS_SUBWOOFER_PHASE_LABELS, SPEAKER_SETTINGS_SUBWOOFER_PHASE_VALUES,
                         propertyName, value);
-            } else if (name.equalsIgnoreCase("subwooferPower")) {
+            } else if (name.equalsIgnoreCase(SUBWOOFER_POWER)) {
                 createSwitch(statistics, controls, propertyName, value.equalsIgnoreCase("true"), "On", "Off");
             }
-            statistics.put("SpeakerSettings#" + StringUtils.capitalize(jsonNode.at(TARGET_URI).asText()), jsonNode.at("/currentValue").asText());
+            statistics.put(SPEAKER_SETTINGS_GROUP + StringUtils.capitalize(jsonNode.at(TARGET_URI).asText()), jsonNode.at(CURRENT_VALUE_URI).asText());
         });
     }
 
@@ -407,7 +380,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
      * */
     private void generateLEDIndicatorStatistics(Map<String, String> statistics, List<AdvancedControllableProperty> controls) throws Exception {
         JsonNode indicatorStatus = this.doPost(SYSTEM_URI, getLEDIndicatorStatus, JsonNode.class).at(RESULT_0_URI);
-        createDropdown(statistics, controls, ledIndicatorModes, ledIndicatorModes, LED_INDICATOR_MODE_PROPERTY, indicatorStatus.at(MODE_URI).asText());
+        createDropdown(statistics, controls, LED_INDICATOR_MODES, LED_INDICATOR_MODES, LED_INDICATOR_MODE_PROPERTY, indicatorStatus.at(MODE_URI).asText());
         if (indicatorStatus.at(STATUS_URI).isNull()) {
             statistics.put(LED_INDICATOR_STATE_PROPERTY, "Unknown");
         } else {
@@ -454,27 +427,27 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         switch (prop) {
             case SOUND_OUTPUT_TERMINAL:
                 this.doPost(AUDIO_URI, setSoundSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", value, "target", "outputTerminal"))));
+                        ImmutableMap.of("value", value, "target", OUTPUT_TERMINAL))));
                 break;
             case SPEAKER_TV_POSITION:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", value, "target", "tvPosition"))));
+                        ImmutableMap.of("value", value, "target", TV_POSITION))));
                 break;
             case SPEAKER_SUBWOOFER_LEVEL:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", value, "target", "subwooferLevel"))));
+                        ImmutableMap.of("value", value, "target", SUBWOOFER_LEVEL))));
                 break;
             case SPEAKER_SUBWOOFER_FREQ:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", value, "target", "subwooferFreq"))));
+                        ImmutableMap.of("value", value, "target", SUBWOOFER_FREQ))));
                 break;
             case SPEAKER_SUBWOOFER_PHASE:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", value, "target", "subwooferPhase"))));
+                        ImmutableMap.of("value", value, "target", SUBWOOFER_PHASE))));
                 break;
             case SPEAKER_SUBWOOFER_POWER:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", "0".equals(value) ? "off" : "on", "target", "subwooferPower"))));
+                        ImmutableMap.of("value", "0".equals(value) ? "off" : "on", "target", SUBWOOFER_POWER))));
                 break;
             case REBOOT_PROPERTY:
                 this.doPost(SYSTEM_URI, requestReboot);

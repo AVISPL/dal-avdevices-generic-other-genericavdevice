@@ -10,6 +10,17 @@ package com.insightsystems.dal.sony.data;
  * @author Maksym.Rossiytsev
  * */
 public class Constant {
+    //Values for dropdown controls
+    public static final String[] SOUND_SETTINGS_LABELS = new String[] {"Speaker", "SpeakerHDMI", "HDMI", "AudioSystem"};
+    public static final String[] SOUND_SETTINGS_VALUES = new String[] {"speaker", "speaker_hdmi", "hdmi", "audioSystem"};
+    public static final String[] SPEAKER_SETTINGS_TV_POSITION_LABELS = new String[] {"TableTop", "WallMount"};
+    public static final String[] SPEAKER_SETTINGS_TV_POSITION_VALUES = new String[]{"tableTop", "wallMount"};
+    public static final String[] SPEAKER_SETTINGS_SUBWOOFER_PHASE_LABELS = new String[] {"Normal", "Reverse"};
+    public static final String[] SPEAKER_SETTINGS_SUBWOOFER_PHASE_VALUES = new String[]{"normal", "reverse"};
+    public static final String[] POWER_SAVE_MODES_LABELS = new String[]{"Off", "Low", "High", "PictureOff"};
+    public static final String[] POWER_SAVE_MODES_VALUES = new String[]{"off", "low", "high", "pictureOff"};
+    public static final String[] LED_INDICATOR_MODES = new String[]{"Demo", "AutoBrightnessAdjust", "Dark", "SimpleResponse", "Off"};
+
     // Property names
     public static final String MODEL_PROPERTY = "Model";
     public static final String PRODUCT_NAME_PROPERTY = "Device#ProductName";
@@ -39,10 +50,20 @@ public class Constant {
     public static final String SPEAKER_SUBWOOFER_FREQ = "SpeakerSettings#SubwooferFreq";
     public static final String SPEAKER_SUBWOOFER_PHASE = "SpeakerSettings#SubwooferPhase";
     public static final String SPEAKER_SUBWOOFER_POWER = "SpeakerSettings#SubwooferPower";
-
+    public static final String CONTENT_INFORMATION_TOTAL_HDMI_COUNT = "ContentInformation#TotalHDMICount";
+    public static final String CONTENT_INFORMATION_HDMI_PORT = "ContentInformation#HDMIPort";
+    public static final String CONTENT_INFORMATION_TOTAL_CEC_COUNT = "ContentInformation#TotalCECCount";
+    public static final String CONTENT_INFORMATION_CEC_PORT = "ContentInformation#CECPort";
+    public static final String CONTENT_INFORMATION_TOTAL_COMPONENT_COUNT = "ContentInformation#TotalComponentCount";
+    public static final String CONTENT_INFORMATION_COMPONENT_PORT = "ContentInformation#ComponentPort";
+    public static final String CONTENT_INFORMATION_TOTAL_COMPOSITE_COUNT = "ContentInformation#TotalCompositeCount";
+    public static final String CONTENT_INFORMATION_COMPOSITE_PORT = "ContentInformation#CompositePort";
+    public static final String CONTENT_INFORMATION_TOTAL_WIDI_COUNT = "ContentInformation#TotalWIDICount";
+    public static final String CONTENT_INFORMATION_WIDI_PORT = "ContentInformation#WIDIPort";
     public static final String SIGNAL_PRESENCE_GROUP = "SignalPresence#";
     public static final String CONTROL_GROUP = "Control#";
     public static final String NETWORK_GROUP = "Network#";
+    public static final String SPEAKER_SETTINGS_GROUP = "SpeakerSettings#";
 
     public static final String VOLUME = "Volume";
     public static final String MUTE = "Mute";
@@ -75,6 +96,12 @@ public class Constant {
     public static final String SET_SPEAKER_SETTINGS = "setSpeakerSettings";
     public static final String GET_CONTENT_COUNT = "getContentCount";
     public static final String GET_CONTENT_LIST = "getContentList";
+    public static final String OUTPUT_TERMINAL = "outputTerminal";
+    public static final String TV_POSITION = "tvPosition";
+    public static final String SUBWOOFER_LEVEL = "subwooferLevel";
+    public static final String SUBWOOFER_FREQ = "subwooferFreq";
+    public static final String SUBWOOFER_PHASE = "subwooferPhase";
+    public static final String SUBWOOFER_POWER = "subwooferPower";
 
     // URIs
     public static final String SYSTEM_URI = "system";
@@ -94,6 +121,7 @@ public class Constant {
     public static final String PRODUCT_NAME_URI = "/productName";
     public static final String PRODUCT_CATEGORY_URI = "/productCategory";
     public static final String INTERFACE_VERSION_URI = "/interfaceVersion";
+    public static final String CURRENT_VALUE_URI = "/currentValue";
     public static final String SERIAL_URI = "/serial";
     public static final String TITLE_URI = "/title";
     public static final String TARGET_URI = "/target";

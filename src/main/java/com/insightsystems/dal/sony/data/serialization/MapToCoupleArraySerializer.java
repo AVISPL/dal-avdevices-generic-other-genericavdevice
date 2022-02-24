@@ -4,7 +4,6 @@
 package com.insightsystems.dal.sony.data.serialization;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.Multimap;
@@ -30,8 +29,7 @@ public class MapToCoupleArraySerializer extends JsonSerializer<Multimap<String, 
      **/
     @Override
     public void serialize(Multimap<String, Object> value, JsonGenerator generator,
-                          SerializerProvider serializers) throws IOException,
-            JsonProcessingException {
+                          SerializerProvider serializers) throws IOException {
         generator.writeStartArray();
 
         if (!value.isEmpty()) {
