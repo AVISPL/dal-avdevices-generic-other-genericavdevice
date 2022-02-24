@@ -249,7 +249,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         if (!json.isMissingNode()) {
             statistics.put(contentCountProperty, String.valueOf(json.size()));
             json.forEach(jsonNode -> {
-                int portNumber = jsonNode.at("/index").asInt() + 1;
+                int portNumber = jsonNode.at(INDEX_URI).asInt() + 1;
                 statistics.put(contentPortProperty + portNumber, jsonNode.at(TITLE_URI).asText());
             });
         } else {
@@ -312,7 +312,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         ArrayNode applicationStatusList = (ArrayNode) this.doPost(APP_CONTROL_URI, getApplicationStatusList, JsonNode.class).at(RESULT_0_URI);
 
         applicationStatusList.forEach(jsonNode -> {
-            String propertyName = "ApplicationStatus#" + StringUtils.capitalize(jsonNode.at("/name").asText());
+            String propertyName = APPLICATION_STATUS_GROUP + StringUtils.capitalize(jsonNode.at(NAME_URI).asText());
             statistics.put(propertyName, jsonNode.at(STATUS_URI).asText());
         });
     }
@@ -396,7 +396,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
     private String getErrors(JsonNode jsonResponse) {
         if (jsonResponse.has("error")) {
             StringBuilder errorOutput = new StringBuilder();
-            ArrayNode errors = (ArrayNode) jsonResponse.at("/error");
+            ArrayNode errors = (ArrayNode) jsonResponse.at(ERROR_URI);
             for (int i = 0; i < errors.size(); i += 2) {
                 if (errorOutput.length() > 0)
                     errorOutput.append(", ");

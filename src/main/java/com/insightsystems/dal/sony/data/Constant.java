@@ -64,6 +64,7 @@ public class Constant {
     public static final String CONTROL_GROUP = "Control#";
     public static final String NETWORK_GROUP = "Network#";
     public static final String SPEAKER_SETTINGS_GROUP = "SpeakerSettings#";
+    public static final String APPLICATION_STATUS_GROUP = "ApplicationStatus#";
 
     public static final String VOLUME = "Volume";
     public static final String MUTE = "Mute";
@@ -137,6 +138,9 @@ public class Constant {
     public static final String VOLUME_URI = "/volume";
     public static final String MUTE_URI = "/mute";
     public static final String URI_URI = "/uri";
+    public static final String NAME_URI = "/name";
+    public static final String ERROR_URI = "/error";
+    public static final String INDEX_URI = "/index";
     public static final String CONNECTION_URI = "/connection";
     public static final String NETIF_URI = "/netif";
     public static final String HW_ADDR_URI = "/hwAddr";
