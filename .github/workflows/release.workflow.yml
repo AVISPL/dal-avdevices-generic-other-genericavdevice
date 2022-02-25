@@ -53,7 +53,7 @@ jobs:
     - name: PMD check
       run: mvn pmd:check
     - id: getfilename
-      run: echo "::set-output name=file::$(ls target/symphony-dal-communicator-avdevices-monitors-sony-${{ needs.versiongenerate.outputs.version }}.jar)"
+      run: echo "::set-output name=file::$(ls target/symphony-dal-communicator-monitors-sony-${{ needs.versiongenerate.outputs.version }}.jar)"
     - uses: actions/upload-artifact@v2
       with:
         name: SonyBravia
