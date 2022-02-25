@@ -108,7 +108,6 @@ public class SystemRequest {
     }
 
     public SystemRequest withParams(AbstractMap.SimpleEntry<String, Object>... entries) {
-        StringBuilder sb = new StringBuilder();
         params.clear();
         for (Map.Entry<String, Object> entry: entries) {
             params.put(entry.getKey(), entry.getValue());
