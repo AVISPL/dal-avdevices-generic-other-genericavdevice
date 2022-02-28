@@ -39,10 +39,16 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         this.setContentType("application/json");
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void authenticate() {
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Statistics> getMultipleStatistics() throws Exception {
         ExtendedStatistics extStats = new ExtendedStatistics();
@@ -195,8 +201,9 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
      * */
     private void generateApplicationsStatistics(Map<String, String> statistics, List<AdvancedControllableProperty> controls) throws Exception {
         ArrayNode apps = (ArrayNode) this.doPost(APP_CONTROL_URI, getApplicationList, JsonNode.class).at(RESULT_0_URI);
-        String[] appLabels = new String[apps.size() + 1];
-        String[] appOptions = new String[apps.size() + 1];
+        int id = apps.size() + 1;
+        String[] appLabels = new String[id];
+        String[] appOptions = new String[id];
 
         appLabels[apps.size()] = "-Select Application-";
         appOptions[apps.size()] = "";
@@ -410,6 +417,9 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         return "";
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void controlProperty(ControllableProperty cp) throws Exception {
         String prop = cp.getProperty();
@@ -481,12 +491,18 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void controlProperties(List<ControllableProperty> list) throws Exception {
         for (ControllableProperty cp : list)
             controlProperty(cp);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected HttpHeaders putExtraRequestHeaders(HttpMethod httpMethod, String uri, HttpHeaders headers) {
         headers.add("X-Auth-PSK", this.getPassword());
