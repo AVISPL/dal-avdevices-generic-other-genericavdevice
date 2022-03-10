@@ -471,7 +471,6 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         String value = String.valueOf(cp.getValue());
 
         if (property.endsWith(VOLUME)) {
-            String target = property.substring(8, property.length() - 7);
             this.doPost("audio", setAudioVolume.withParams(ImmutableMap.of("volume", value.split("\\.")[0], "target", "")));
             return;
         } else if (property.endsWith(MUTE)) {
