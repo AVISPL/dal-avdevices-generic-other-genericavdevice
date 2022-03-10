@@ -8,6 +8,9 @@ import org.junit.Test;
 
 import java.util.Map;
 
+import static com.insightsystems.dal.sony.data.Constant.SPEAKER_SUBWOOFER_FREQ;
+import static com.insightsystems.dal.sony.data.Constant.SPEAKER_SUBWOOFER_LEVEL;
+
 public class SonyBraviaCommunicatorTest {
     SonyBraviaCommunicator lcd;
 
@@ -24,17 +27,17 @@ public class SonyBraviaCommunicatorTest {
     @Test
     public void validateAllStatistics() throws Exception {
         Map<String,String> stats = ((ExtendedStatistics)lcd.getMultipleStatistics().get(0)).getStatistics();
-        Assert.assertNotNull(stats.get("Controls#Input"));
-        Assert.assertNotNull(stats.get("Controls#Power"));
-        Assert.assertNotNull(stats.get("Controls#PowerSaveMode"));
-        Assert.assertNotNull(stats.get("Controls#Reboot"));
-        Assert.assertNotNull(stats.get("Controls#TerminateApps"));
-        Assert.assertNotNull(stats.get("Device#DateTime"));
-        Assert.assertNotNull(stats.get("Device#InterfaceVersion"));
-        Assert.assertNotNull(stats.get("Device#LedIndicatorMode"));
-        Assert.assertNotNull(stats.get("Device#LedIndicatorState"));
-        Assert.assertNotNull(stats.get("Device#ProductName"));
-        Assert.assertNotNull(stats.get("Device#SerialNumber"));
+        Assert.assertNotNull(stats.get("DeviceControls#Input"));
+        Assert.assertNotNull(stats.get("DeviceControls#Power"));
+        Assert.assertNotNull(stats.get("DeviceControls#PowerSaveMode"));
+        Assert.assertNotNull(stats.get("DeviceControls#Reboot"));
+        Assert.assertNotNull(stats.get("DeviceControls#TerminateApps"));
+        Assert.assertNotNull(stats.get("DeviceInfo#DateTime"));
+        Assert.assertNotNull(stats.get("DeviceInfo#InterfaceVersion"));
+        Assert.assertNotNull(stats.get("DeviceInfo#LedIndicatorMode"));
+        Assert.assertNotNull(stats.get("DeviceInfo#LedIndicatorState"));
+        Assert.assertNotNull(stats.get("DeviceInfo#ProductName"));
+        Assert.assertNotNull(stats.get("DeviceInfo#SerialNumber"));
         Assert.assertNotNull(stats.get("Network#DnsPrimary"));
         Assert.assertNotNull(stats.get("Network#Gateway"));
         Assert.assertNotNull(stats.get("Network#InterfaceName"));
@@ -53,5 +56,47 @@ public class SonyBraviaCommunicatorTest {
         lcd.controlProperty(property);
         Map<String,String> stats = ((ExtendedStatistics)lcd.getMultipleStatistics().get(0)).getStatistics();
         Assert.assertEquals("1", stats.get("Controls#Power"));
+    }
+
+    @Test
+    public void testVolume() throws Exception {
+        ControllableProperty property = new ControllableProperty();
+        property.setProperty("AudioControls#SpeakerVolume");
+        property.setValue(20.1f);
+        lcd.controlProperty(property);
+        Map<String,String> stats = ((ExtendedStatistics)lcd.getMultipleStatistics().get(0)).getStatistics();
+        Assert.assertEquals("20.0", stats.get("AudioControls#SpeakerVolume"));
+    }
+
+    @Test
+    public void testSubwooferFreq() throws Exception {
+        ControllableProperty property = new ControllableProperty();
+        property.setProperty(SPEAKER_SUBWOOFER_FREQ);
+        property.setValue(15.1f);
+        lcd.controlProperty(property);
+        Map<String,String> stats = ((ExtendedStatistics)lcd.getMultipleStatistics().get(0)).getStatistics();
+        Assert.assertEquals("15", stats.get(SPEAKER_SUBWOOFER_FREQ));
+    }
+
+    @Test
+    public void testSubwooferLevel() throws Exception {
+        ControllableProperty property = new ControllableProperty();
+        property.setProperty(SPEAKER_SUBWOOFER_LEVEL);
+        property.setValue(10.1f);
+        lcd.getMultipleStatistics();
+        lcd.controlProperty(property);
+        Map<String,String> stats = ((ExtendedStatistics)lcd.getMultipleStatistics().get(0)).getStatistics();
+        Assert.assertEquals("10", stats.get(SPEAKER_SUBWOOFER_LEVEL));
+    }
+
+    @Test
+    public void testSpeakerMute() throws Exception {
+        ControllableProperty property = new ControllableProperty();
+        property.setProperty("AudioControls#SpeakerMute");
+        property.setValue(0);
+        lcd.getMultipleStatistics();
+        lcd.controlProperty(property);
+        Map<String,String> stats = ((ExtendedStatistics)lcd.getMultipleStatistics().get(0)).getStatistics();
+        Assert.assertEquals("0", stats.get("AudioControls#SpeakerMute"));
     }
 }

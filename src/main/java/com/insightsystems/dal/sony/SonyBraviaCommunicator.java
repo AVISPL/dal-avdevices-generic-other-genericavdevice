@@ -20,6 +20,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.insightsystems.dal.sony.data.Constant.*;
 import static com.insightsystems.dal.sony.data.commands.LCDCommands.*;
@@ -34,6 +35,31 @@ import static com.insightsystems.dal.sony.data.commands.LCDCommands.*;
  * @see <a href="https://pro-bravia.sony.net/develop/integrate/rest-api/spec/">Sony Rest API Spec</a>
  */
 public class SonyBraviaCommunicator extends RestCommunicator implements Controller, Monitorable {
+    /**
+     * Timestamp of the last control operation, used to determine whether we need to wait
+     * for {@link #CONTROL_OPERATION_COOLDOWN_MS} before collecting new statistics
+     */
+    private long latestControlTimestamp;
+
+    /**
+     * Cooldown period for control operation. Most control operations (toggle/slider based in this case) may be
+     * requested multiple times in a row. Normally, a control operation would trigger an emergency delivery action,
+     * which is not wanted in this case - such control operations will stack multiple statistics retrieval calls,
+     * while instead we can define a cooldown period, so multiple controls operations will be stacked within this
+     * period and the control states are modified within the {@link #localStatistics} variable.
+     */
+    private static final int CONTROL_OPERATION_COOLDOWN_MS = 5000;
+
+    /**
+     * A mutex lock to avoid triggering multiple controls at the same time
+     */
+    private final ReentrantLock controlOperationsLock = new ReentrantLock();
+
+    /**
+     * Storage for a local statistics, to populate when controls are on {@link #CONTROL_OPERATION_COOLDOWN_MS} cooldown
+     */
+    private ExtendedStatistics localStatistics;
+
     public SonyBraviaCommunicator() {
         this.setBaseUri("sony");
         this.setContentType("application/json");
@@ -51,41 +77,60 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
      */
     @Override
     public List<Statistics> getMultipleStatistics() throws Exception {
-        ExtendedStatistics extStats = new ExtendedStatistics();
-        Map<String, String> stats = new HashMap<>();
-        List<AdvancedControllableProperty> controls = new ArrayList<>();
-        //Device Info
-        generateDeviceInfoStatistics(stats);
-        //Network Information
-        generateNetworkStatistics(stats);
-        //Device Inputs
-        generateInputStatistics(stats, controls);
-        //Volume Information
-        generateVolumeStatistics(stats, controls);
-        //Power State
-        generatePowerStatistics(stats, controls);
-        //Available applications
-        generateApplicationsStatistics(stats, controls);
-        //Led Indicator
-        generateLEDIndicatorStatistics(stats, controls);
-        //Audio devices
-        generateAudioStatistics(stats, controls);
-        //Application status
-        generateApplicationStatusStatistics(stats);
-        //Content statistics (ports)
-        generateContentStatistics(stats);
-        //System DateTime
-        stats.put(DATE_TIME_PROPERTY, this.doPost(SYSTEM_URI, getCurrentTime, JsonNode.class).at(DATE_TIME_URI).asText());
-        //Power Save Modes
-        JsonNode powerSave = this.doPost(SYSTEM_URI, getPowerSavingMode, JsonNode.class);
-        createDropdown(stats, controls, POWER_SAVE_MODES_LABELS, POWER_SAVE_MODES_VALUES, POWER_SAVE_MODE_PROPERTY, powerSave.at(MODE_0_URI).asText());
-        //Stateless Control Buttons
-        createButton(stats, controls, REBOOT_PROPERTY, "Reboot", "Rebooting", 10_000L);
-        createButton(stats, controls, TERMINATE_APPS_PROPERTY, "Kill Apps", "Killing", 1_000L);
+        ExtendedStatistics extendedStatistics = new ExtendedStatistics();
 
-        extStats.setStatistics(stats);
-        extStats.setControllableProperties(controls);
-        return Collections.singletonList(extStats);
+        controlOperationsLock.lock();
+        try {
+            if (isValidControlCoolDown() && localStatistics != null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Device is occupied. Skipping statistics refresh call.");
+                }
+                extendedStatistics.setStatistics(localStatistics.getStatistics());
+                extendedStatistics.setControllableProperties(localStatistics.getControllableProperties());
+
+                return Collections.singletonList(extendedStatistics);
+            }
+
+            Map<String, String> stats = new HashMap<>();
+            List<AdvancedControllableProperty> controls = new ArrayList<>();
+            //Device Info
+            generateDeviceInfoStatistics(stats);
+            //Network Information
+            generateNetworkStatistics(stats);
+            //Device Inputs
+            generateInputStatistics(stats, controls);
+            //Volume Information
+            generateVolumeStatistics(stats, controls);
+            //Power State
+            generatePowerStatistics(stats, controls);
+            //Available applications
+            generateApplicationsStatistics(stats, controls);
+            //Led Indicator
+            generateLEDIndicatorStatistics(stats, controls);
+            //Audio devices
+            generateAudioStatistics(stats, controls);
+            //Application status
+            generateApplicationStatusStatistics(stats);
+            //Content statistics (ports)
+            generateContentStatistics(stats);
+            //System DateTime
+            stats.put(DATE_TIME_PROPERTY, this.doPost(SYSTEM_URI, getCurrentTime, JsonNode.class).at(DATE_TIME_URI).asText());
+            //Power Save Modes
+            JsonNode powerSave = this.doPost(SYSTEM_URI, getPowerSavingMode, JsonNode.class);
+            createDropdown(stats, controls, POWER_SAVE_MODES_LABELS, POWER_SAVE_MODES_VALUES, POWER_SAVE_MODE_PROPERTY, powerSave.at(MODE_0_URI).asText());
+            //Stateless Control Buttons
+            createButton(stats, controls, REBOOT_PROPERTY, "Reboot", "Rebooting", 10_000L);
+            createButton(stats, controls, TERMINATE_APPS_PROPERTY, "Kill Apps", "Killing", 0L);
+
+            extendedStatistics.setStatistics(stats);
+            extendedStatistics.setControllableProperties(controls);
+
+            localStatistics = extendedStatistics;
+        } finally {
+            controlOperationsLock.unlock();
+        }
+
+        return Collections.singletonList(extendedStatistics);
     }
 
     /**
@@ -145,7 +190,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
      * {@link LCDCommands#getVolumeInformation} payload
      * and populate it as a set of properties:
      *
-     * {@value Constant#CONTROL_GROUP} (with {@link Constant#TARGET_URI} and Mute/Volume values attached),
+     * {@value Constant#AUDIO_CONTROL_GROUP} (with {@link Constant#TARGET_URI} and Mute/Volume values attached),
      * effectively generates controllable properties for them.
      *
      * @param statistics to keep collected properties
@@ -159,7 +204,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
             ArrayNode audioOuts = (ArrayNode) audioResponse.at(RESULT_0_URI);
             for (int i = 0; i < audioOuts.size(); i++) {
                 JsonNode out = audioOuts.get(i);
-                String name = CONTROL_GROUP + out.at(TARGET_URI);
+                String name = AUDIO_CONTROL_GROUP + StringUtils.capitalize(out.at(TARGET_URI).asText());
                 createSlider(statistics, controls, name + "Volume",
                         (float) out.at(MIN_VOLUME_URI).asDouble(), (float) out.at(MAX_VOLUME_URI).asDouble(), (float) out.at(VOLUME_URI).asDouble());
                 createSwitch(statistics, controls, name + "Mute", out.at(MUTE_URI).asBoolean(), "On", "Off");
@@ -302,7 +347,7 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
                 createDropdown(statistics, controls, SPEAKER_SETTINGS_SUBWOOFER_PHASE_LABELS, SPEAKER_SETTINGS_SUBWOOFER_PHASE_VALUES,
                         propertyName, value);
             } else if (name.equalsIgnoreCase(SUBWOOFER_POWER)) {
-                createSwitch(statistics, controls, propertyName, value.equalsIgnoreCase("true"), "On", "Off");
+                createSwitch(statistics, controls, propertyName, value.equalsIgnoreCase("on"), "On", "Off");
             }
             statistics.put(SPEAKER_SETTINGS_GROUP + StringUtils.capitalize(jsonNode.at(TARGET_URI).asText()), jsonNode.at(CURRENT_VALUE_URI).asText());
         });
@@ -422,20 +467,20 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
      */
     @Override
     public void controlProperty(ControllableProperty cp) throws Exception {
-        String prop = cp.getProperty();
+        String property = cp.getProperty();
         String value = String.valueOf(cp.getValue());
 
-        if (prop.endsWith(VOLUME)) {
-            String target = prop.substring(8, prop.length() - 7);
-            this.doPost("audio", setAudioVolume.withParams(ImmutableMap.of("volume", value, target, target)));
+        if (property.endsWith(VOLUME)) {
+            String target = property.substring(8, property.length() - 7);
+            this.doPost("audio", setAudioVolume.withParams(ImmutableMap.of("volume", value.split("\\.")[0], "target", "")));
             return;
-        } else if (prop.endsWith(MUTE)) {
+        } else if (property.endsWith(MUTE)) {
             this.doPost("audio", setAudioMute.withParams(ImmutableMap.of("status", value.equals("1"))));
             return;
         }
 
-        switch (prop) {
-            case SOUND_OUTPUT_TERMINAL:
+        switch (property) {
+            case SPEAKER_OUTPUT_TERMINAL:
                 this.doPost(AUDIO_URI, setSoundSettings.withParams(ImmutableMap.of("settings",
                         ImmutableMap.of("value", value, "target", OUTPUT_TERMINAL))));
                 break;
@@ -445,11 +490,11 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
                 break;
             case SPEAKER_SUBWOOFER_LEVEL:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", value, "target", SUBWOOFER_LEVEL))));
+                        ImmutableMap.of("value", value.split("\\.")[0], "target", SUBWOOFER_LEVEL))));
                 break;
             case SPEAKER_SUBWOOFER_FREQ:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
-                        ImmutableMap.of("value", value, "target", SUBWOOFER_FREQ))));
+                        ImmutableMap.of("value", value.split("\\.")[0], "target", SUBWOOFER_FREQ))));
                 break;
             case SPEAKER_SUBWOOFER_PHASE:
                 this.doPost(AUDIO_URI, setSpeakerSettings.withParams(ImmutableMap.of("settings",
@@ -466,8 +511,14 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
                 this.doPost(APP_CONTROL_URI, terminateApps);
                 break;
             case LED_INDICATOR_MODE_PROPERTY:
-                this.doPost(SYSTEM_URI, setLEDIndicatorStatus.withParams(
-                        ImmutableMap.of("mode", value, "status", null)));
+                Map<String, Object> request = new HashMap<>();
+                request.put("mode", value);
+                request.put("status", null);
+                JsonNode response = this.doPost(SYSTEM_URI, setLEDIndicatorStatus.withParams(request), JsonNode.class);
+                if(!StringUtils.isEmpty(getErrors(response))) {
+                    throw new IllegalStateException(
+                            String.format("Unable to set LED indicator status to %s.", value));
+                }
                 break;
             case LAUNCH_APPLICATION_PROPERTY:
                 if (!value.equals("")) {
@@ -476,7 +527,11 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
                 }
                 break;
             case POWER_PROPERTY:
-                this.doPost(SYSTEM_URI, setPowerStatus.withParams(ImmutableMap.of("status", value.equals("1"))));
+                response = this.doPost(SYSTEM_URI, setPowerStatus.withParams(ImmutableMap.of("status", value.equals("1"))), JsonNode.class);
+                if(!StringUtils.isEmpty(getErrors(response))) {
+                    throw new IllegalStateException(
+                            String.format("Unable to set power state to %s: Check device status and remote control permissions.", value));
+                }
                 break;
             case INPUT_PROPERTY:
                 this.doPost(AV_CONTENT_URI, setPlayContent.withParams(ImmutableMap.of("uri", value)));
@@ -486,9 +541,11 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
                 break;
             default:
                 if (this.logger.isWarnEnabled())
-                    this.logger.warn("Control property \"" + prop + "\" is invalid");
-                throw new UnsupportedOperationException("Control property \"" + prop + "\" is invalid");
+                    this.logger.warn("Control property \"" + property + "\" is invalid");
+                throw new UnsupportedOperationException("Control property \"" + property + "\" is invalid");
         }
+        updateLatestControlTimestamp();
+        updateLocalControllableProperty(property, value);
     }
 
     /**
@@ -596,5 +653,41 @@ public class SonyBraviaCommunicator extends RestCommunicator implements Controll
         slider.setRangeEnd(maxValue);
         stats.put(name, String.valueOf(currentValue));
         controls.add(new AdvancedControllableProperty(name, new Date(), slider, currentValue));
+    }
+
+    /**
+     * For better usability, emergency delivery operations, triggered by control actions, end up with receiving latest
+     * statistics values (saved in {@link #localStatistics}) that are updated with updated controllable properties values
+     * before being returned. It is done in order to eliminate timeout errors and reduce waiting time between control
+     * operations (so all the controls that happen during certain period of time are not interrupted by the emergency
+     * delivery operations)
+     *
+     * @param property control property to update
+     * @param value    to set
+     */
+    private void updateLocalControllableProperty(String property, String value) {
+        if (localStatistics == null) {
+            return;
+        }
+        localStatistics.getControllableProperties().stream().filter(cp -> cp.getName().equals(property)).findFirst().ifPresent(cp -> {
+            cp.setValue(value);
+            cp.setTimestamp(new Date());
+        });
+    }
+
+    /**
+     * Update timestamp of the latest control operation
+     */
+    private void updateLatestControlTimestamp() {
+        latestControlTimestamp = System.currentTimeMillis();
+    }
+
+    /***
+     * Check whether the control operations cooldown has ended
+     *
+     * @return boolean value indicating whether the cooldown has ended or not
+     */
+    private boolean isValidControlCoolDown() {
+        return (System.currentTimeMillis() - latestControlTimestamp) < CONTROL_OPERATION_COOLDOWN_MS;
     }
 }

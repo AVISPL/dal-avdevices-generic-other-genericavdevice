@@ -23,12 +23,12 @@ public class Constant {
 
     // Property names
     public static final String MODEL_PROPERTY = "Model";
-    public static final String PRODUCT_NAME_PROPERTY = "Device#ProductName";
-    public static final String PRODUCT_CATEGORY_PROPERTY = "Device#ProductCategory";
-    public static final String INTERFACE_VERSION_PROPERTY = "Device#InterfaceVersion";
-    public static final String SERIAL_NUMBER_PROPERTY = "Device#SerialNumber";
-    public static final String POWER_PROPERTY = "Controls#Power";
-    public static final String LAUNCH_APPLICATION_PROPERTY = "Controls#LaunchApplication";
+    public static final String PRODUCT_NAME_PROPERTY = "DeviceInfo#ProductName";
+    public static final String PRODUCT_CATEGORY_PROPERTY = "DeviceInfo#ProductCategory";
+    public static final String INTERFACE_VERSION_PROPERTY = "DeviceInfo#InterfaceVersion";
+    public static final String SERIAL_NUMBER_PROPERTY = "DeviceInfo#SerialNumber";
+    public static final String POWER_PROPERTY = "DeviceControls#Power";
+    public static final String LAUNCH_APPLICATION_PROPERTY = "DeviceControls#LaunchApplication";
     public static final String INTERFACE_NAME_PROPERTY = "Network#InterfaceName";
     public static final String MAC_ADDRESS_PROPERTY = "Network#MACAddress";
     public static final String IPV4_ADDRESS_PROPERTY = "Network#IPv4Address";
@@ -37,14 +37,14 @@ public class Constant {
     public static final String GATEWAY_PROPERTY = "Network#Gateway";
     public static final String DNS_PRIMARY_PROPERTY = "Network#DNSPrimary";
     public static final String DNS_SECONDARY_PROPERTY = "Network#DNSSecondary";
-    public static final String LED_INDICATOR_MODE_PROPERTY = "Device#LedIndicatorMode";
-    public static final String LED_INDICATOR_STATE_PROPERTY = "Device#LedIndicatorState";
-    public static final String DATE_TIME_PROPERTY = "Device#DateTime";
-    public static final String POWER_SAVE_MODE_PROPERTY = "Controls#PowerSaveMode";
-    public static final String REBOOT_PROPERTY = "Controls#Reboot";
-    public static final String TERMINATE_APPS_PROPERTY = "Controls#TerminateApps";
-    public static final String INPUT_PROPERTY = "Controls#Input";
-    public static final String SOUND_OUTPUT_TERMINAL = "SoundSettings#OutputTerminal";
+    public static final String LED_INDICATOR_MODE_PROPERTY = "DeviceInfo#LedIndicatorMode";
+    public static final String LED_INDICATOR_STATE_PROPERTY = "DeviceInfo#LedIndicatorState";
+    public static final String DATE_TIME_PROPERTY = "DeviceInfo#DateTime";
+    public static final String POWER_SAVE_MODE_PROPERTY = "DeviceControls#PowerSaveMode";
+    public static final String REBOOT_PROPERTY = "DeviceControls#Reboot";
+    public static final String TERMINATE_APPS_PROPERTY = "DeviceControls#TerminateApps";
+    public static final String INPUT_PROPERTY = "DeviceControls#Input";
+    public static final String SPEAKER_OUTPUT_TERMINAL = "SpeakerSettings#OutputTerminal";
     public static final String SPEAKER_TV_POSITION = "SpeakerSettings#TvPosition";
     public static final String SPEAKER_SUBWOOFER_LEVEL = "SpeakerSettings#SubwooferLevel";
     public static final String SPEAKER_SUBWOOFER_FREQ = "SpeakerSettings#SubwooferFreq";
@@ -61,7 +61,7 @@ public class Constant {
     public static final String CONTENT_INFORMATION_TOTAL_WIDI_COUNT = "ContentInformation#TotalWIDICount";
     public static final String CONTENT_INFORMATION_WIDI_PORT = "ContentInformation#WIDIPort";
     public static final String SIGNAL_PRESENCE_GROUP = "SignalPresence#";
-    public static final String CONTROL_GROUP = "Control#";
+    public static final String AUDIO_CONTROL_GROUP = "AudioControls#";
     public static final String NETWORK_GROUP = "Network#";
     public static final String SPEAKER_SETTINGS_GROUP = "SpeakerSettings#";
     public static final String APPLICATION_STATUS_GROUP = "ApplicationStatus#";
