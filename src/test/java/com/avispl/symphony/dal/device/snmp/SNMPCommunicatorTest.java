@@ -23,7 +23,7 @@ public class SNMPCommunicatorTest {
     }
 
     @Test
-    public void testSnmpProperties() throws Exception {
+    public void testSnmpPropertiesWin10() throws Exception {
         snmpCommunicator.setHost("127.0.0.1");
         snmpCommunicator.setSnmpProperties(".1.3.6.1.2.1.1.1.0:Hardware|.1.3.6.1.2.1.1.4.0:Name|.1.3.6.1.2.1.1.5.0:DeviceName|.1.3.6.1.2.1.1.6.0:Location|.1.3.6.1.2.1.2.2.1.2.20:Network");
         snmpCommunicator.init();

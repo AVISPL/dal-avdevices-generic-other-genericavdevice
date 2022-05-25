@@ -53,7 +53,7 @@ jobs:
     - name: PMD check
       run: mvn pmd:check
     - id: getfilename
-      run: echo "::set-output name=file::$(ls target/symphony-dal-avdevices-snmp-${{ needs.versiongenerate.outputs.version }}.jar)"
+      run: echo "::set-output name=file::$(ls target/symphony-dal-avdevices-generic-other-genericavdevice-${{ needs.versiongenerate.outputs.version }}.jar)"
     - uses: actions/upload-artifact@v2
       with:
         name: SNMPDevice

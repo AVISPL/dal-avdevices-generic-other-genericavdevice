@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.avispl.symphony.dal.device.snmp</groupId>
-    <artifactId>symphony-dal-avdevices-snmp</artifactId>
+    <artifactId>symphony-dal-avdevices-generic-other-genericavdevice</artifactId>
     <version>1.0.0</version>
     <properties>
         <symphonyApiVersion>RELEASE</symphonyApiVersion>
@@ -80,9 +80,9 @@
         <dependency>
             <groupId>com.avispl.symphony.dal</groupId>
             <artifactId>symphony-dal-commons</artifactId>
-            <version>5.4.0</version>
+            <version>5.6.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/symphony-dal-commons-5.4.0.jar</systemPath>
+            <systemPath>${basedir}/lib/symphony-dal-commons-5.6.0-SNAPSHOT.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.icmp4j</groupId>
