@@ -106,23 +106,29 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
         for (String entry : SNMPPropertyPairs) {
             String[] entries = entry.split(":");
             if (entries.length < 2) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Error: Corrupted SNMP property entry: " + entry);
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Error: Corrupted SNMP property entry: " + entry);
                 }
                 continue;
             }
             String oid = entries[0];
             if (StringUtils.isNullOrEmpty(oid)) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Error: Corrupted SNMP OID entry: " + entry);
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Error: Corrupted SNMP OID entry: " + entry);
                 }
                 continue;
             }
             String propertyName = entries[1];
+            if (StringUtils.isNullOrEmpty(propertyName)) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("Error: Corrupted SNMP propertyName entry: " + entry);
+                }
+                continue;
+            }
             Collection<SnmpEntry> snmpEntries = querySnmp(Collections.singletonList(oid));
             if (snmpEntries.isEmpty()) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("No variable bindings available, skipping.");
+                if (logger.isWarnEnabled()) {
+                    logger.warn("No variable bindings available, skipping.");
                 }
                 continue;
             }
@@ -130,8 +136,8 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
             snmpEntries.forEach(snmpEntry -> {
                 String responseOid = snmpEntry.getOid();
                 if (!oid.endsWith(String.valueOf(responseOid))) {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(String.format("SNMP Entry does not match by OID. Expected: %s, Actual: %s", oid, responseOid));
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(String.format("SNMP Entry does not match by OID. Expected: %s, Actual: %s", oid, responseOid));
                     }
                     return;
                 }

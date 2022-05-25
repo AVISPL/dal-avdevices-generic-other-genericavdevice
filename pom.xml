@@ -75,23 +75,23 @@
         <dependency>
             <groupId>com.avispl.symphony.api</groupId>
             <artifactId>symphony-api-commons</artifactId>
-            <version>5.4.0</version>
+            <version>5.5.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/symphony-api-commons-5.1.1.jar</systemPath>
+            <systemPath>${basedir}/lib/symphony-api-commons-5.5.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.avispl.symphony.api</groupId>
             <artifactId>symphony-api-dal</artifactId>
-            <version>5.4.0</version>
+            <version>5.5.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/symphony-api-dal-5.1.1.jar</systemPath>
+            <systemPath>${basedir}/lib/symphony-api-dal-5.5.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.avispl.symphony.dal</groupId>
             <artifactId>symphony-dal-commons</artifactId>
-            <version>5.1.1</version>
+            <version>5.5.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/symphony-dal-commons-5.1.1.jar</systemPath>
+            <systemPath>${basedir}/lib/symphony-dal-commons-5.5.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.icmp4j</groupId>
@@ -140,4 +140,28 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+
+    <repositories>
+        <repository>
+            <id>avi-spl.snapshots</id>
+            <url>https://nexus.vnocsymphony.com:8443/repository/maven-snapshots/</url>
+        </repository>
+        <repository>
+            <id>avi-spl.releases</id>
+            <url>https://nexus.vnocsymphony.com:8443/repository/maven-releases/</url>
+        </repository>
+    </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>avi-spl.releases</id>
+            <url>https://nexus.vnocsymphony.com:8443/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>avi-spl.snapshots</id>
+            <url>https://nexus.vnocsymphony.com:8443/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
 </project>
