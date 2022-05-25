@@ -81,7 +81,7 @@ public class SNMPCommunicatorTest {
     }
 
     @Test
-    public void testSnmpPropertiesRemote() throws Exception {
+    public void testSnmpPropertiesRemoteSX80() throws Exception {
         snmpCommunicator.setHost("172.31.254.114");
         snmpCommunicator.setSnmpProperties(".1.3.6.1.2.1.1.1.0:SystemDescription|.1.3.6.1.2.1.1.2.0:SystemID|.1.3.6.1.2.1.1.3.0:SystemUptime|.1.3.6.1.2.1.1.5.0:SystemName|.1.3.6.1.2.1.1.7.0:SystemServices|.1.3.6.1.2.1.1.6.0:SystemLocation");
         snmpCommunicator.init();
