@@ -67,11 +67,6 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
     }
 
     @Override
-    protected void internalDestroy() {
-        super.internalDestroy();
-    }
-
-    @Override
     public List<Statistics> getMultipleStatistics() throws Exception {
         ExtendedStatistics extendedStatistics = new ExtendedStatistics();
         Map<String, String> statistics = fetchSNMPProperties();
