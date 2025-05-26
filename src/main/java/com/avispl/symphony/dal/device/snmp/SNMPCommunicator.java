@@ -9,6 +9,16 @@ import com.avispl.symphony.api.dal.dto.snmp.SnmpEntry;
 import com.avispl.symphony.api.dal.monitor.Monitorable;
 import com.avispl.symphony.dal.BaseDevice;
 import com.avispl.symphony.dal.util.StringUtils;
+import org.snmp4j.*;
+import org.snmp4j.event.ResponseEvent;
+import org.snmp4j.mp.MPv3;
+import org.snmp4j.mp.SnmpConstants;
+import org.snmp4j.security.*;
+import org.snmp4j.smi.OID;
+import org.snmp4j.smi.OctetString;
+import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.VariableBinding;
+import org.snmp4j.transport.DefaultUdpTransportMapping;
 
 import java.io.IOException;
 import java.util.*;
@@ -34,6 +44,49 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      */
     private long adapterInitializationTimestamp;
     /**
+     * Snmpv3 username
+     * */
+    private String snmpv3SecurityName;
+    /**
+     * Snmpv3 auth password
+     * */
+    private String snmpv3AuthPassword;
+    /**
+     * Snmpv3 private password
+     * */
+    private String snmpv3PrivatePassword;
+    /**
+     * SNMP Version, 2c by default
+     * */
+    private String version = "2";
+    /**
+     *
+     * */
+    Snmp snmpv3;
+    /**
+     *
+     * */
+    UserTarget<UdpAddress> snmpv3target;
+
+    /**
+     * Retrieves {@link #version}
+     *
+     * @return value of {@link #version}
+     */
+    public String getVersion() {
+        return version;
+    }
+
+    /**
+     * Sets {@link #version} value
+     *
+     * @param version new value of {@link #version}
+     */
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    /**
      * Retrieves {@link #snmpProperties}
      *
      * @return value of {@link #snmpProperties}
@@ -49,6 +102,60 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      */
     public void setSnmpProperties(String snmpProperties) {
         this.snmpProperties = snmpProperties;
+    }
+
+    /**
+     * Retrieves {@link #snmpv3PrivatePassword}
+     *
+     * @return value of {@link #snmpv3PrivatePassword}
+     */
+    public String getSnmpv3PrivatePassword() {
+        return snmpv3PrivatePassword;
+    }
+
+    /**
+     * Sets {@link #snmpv3PrivatePassword} value
+     *
+     * @param snmpv3PrivatePassword new value of {@link #snmpv3PrivatePassword}
+     */
+    public void setSnmpv3PrivatePassword(String snmpv3PrivatePassword) {
+        this.snmpv3PrivatePassword = snmpv3PrivatePassword;
+    }
+
+    /**
+     * Retrieves {@link #snmpv3AuthPassword}
+     *
+     * @return value of {@link #snmpv3AuthPassword}
+     */
+    public String getSnmpv3AuthPassword() {
+        return snmpv3AuthPassword;
+    }
+
+    /**
+     * Sets {@link #snmpv3AuthPassword} value
+     *
+     * @param snmpv3AuthPassword new value of {@link #snmpv3AuthPassword}
+     */
+    public void setSnmpv3AuthPassword(String snmpv3AuthPassword) {
+        this.snmpv3AuthPassword = snmpv3AuthPassword;
+    }
+
+    /**
+     * Retrieves {@link #snmpv3SecurityName}
+     *
+     * @return value of {@link #snmpv3SecurityName}
+     */
+    public String getSnmpv3SecurityName() {
+        return snmpv3SecurityName;
+    }
+
+    /**
+     * Sets {@link #snmpv3SecurityName} value
+     *
+     * @param snmpv3SecurityName new value of {@link #snmpv3SecurityName}
+     */
+    public void setSnmpv3SecurityName(String snmpv3SecurityName) {
+        this.snmpv3SecurityName = snmpv3SecurityName;
     }
 
     @Override
@@ -73,6 +180,7 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
         statistics.put("AdapterMetadata#AdapterVersion", adapterProperties.getProperty("adapter.version"));
         statistics.put("AdapterMetadata#AdapterBuildDate", adapterProperties.getProperty("adapter.build.date"));
         statistics.put("AdapterMetadata#AdapterUptime", normalizeUptime((System.currentTimeMillis() - adapterInitializationTimestamp) / 1000));
+        statistics.put("AdapterMetadata#SNMPVersion", String.valueOf(version));
 
         extendedStatistics.setStatistics(statistics);
         return Collections.singletonList(extendedStatistics);
@@ -102,6 +210,10 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
         if(StringUtils.isNullOrEmpty(snmpProperties)) {
             return result;
         }
+        if (version.equals("3")) {
+            initSNMPv3();
+        }
+
         String[] SNMPPropertyPairs = snmpProperties.split("\\|");
         for (String entry : SNMPPropertyPairs) {
             String[] entries = entry.split(":");
@@ -125,12 +237,18 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
                 }
                 continue;
             }
-            Collection<SnmpEntry> snmpEntries = querySnmp(Collections.singletonList(oid));
-            if (snmpEntries.isEmpty()) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("No variable bindings available, skipping.");
+
+            Collection<SnmpEntry> snmpEntries;
+            if (version.equals("3")) {
+                snmpEntries = querySnmpv3(oid);
+            } else {
+                snmpEntries = querySnmp(Collections.singletonList(oid));
+                if (snmpEntries.isEmpty()) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("No variable bindings available, skipping.");
+                    }
+                    continue;
                 }
-                continue;
             }
 
             snmpEntries.forEach(snmpEntry -> {
@@ -154,7 +272,97 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
                 result.put(propertyName, variableValue.trim());
             });
         }
+        if (version.equals("3")) {
+            snmpv3.close();
+        }
         return result;
+    }
+
+    /**
+     * Initialize v3 SNMP client
+     *
+     * @throws IOException if SNMP isn't initialized properly
+     * */
+    private void initSNMPv3() throws IOException {
+        if (StringUtils.isNullOrEmpty(snmpv3SecurityName)) {
+            throw new IllegalArgumentException("Invalid snmpv3SecurityName: please check snmp version or security name configured.");
+        }
+        if (StringUtils.isNullOrEmpty(snmpv3AuthPassword)) {
+            throw new IllegalArgumentException("Invalid snmpv3AuthPassword: please check snmp version or auth password configured.");
+        }
+        if (StringUtils.isNullOrEmpty(snmpv3PrivatePassword)) {
+            throw new IllegalArgumentException("Invalid snmpv3PrivatePassword: please check snmp version or private password configured.");
+        }
+
+        SecurityProtocols.getInstance().addAuthenticationProtocol( new AuthSHA());
+        SecurityProtocols.getInstance().addAuthenticationProtocol( new AuthHMAC128SHA224());
+        SecurityProtocols.getInstance().addAuthenticationProtocol( new AuthHMAC384SHA512());
+        SecurityProtocols.getInstance().addAuthenticationProtocol( new AuthHMAC192SHA256());
+        SecurityProtocols.getInstance().addAuthenticationProtocol( new AuthHMAC256SHA384());
+        SecurityProtocols.getInstance().addAuthenticationProtocol( new AuthMD5());
+
+        USM usm = new USM(SecurityProtocols.getInstance(),
+                new OctetString(MPv3.createLocalEngineID()), 0);
+        SecurityModels.getInstance().addSecurityModel(usm);
+
+        TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
+        snmpv3 = new Snmp(transport);
+        snmpv3.getMessageDispatcher().addMessageProcessingModel(new MPv3(usm));
+        transport.listen();
+
+        UsmUser user = new UsmUser(new OctetString(snmpv3SecurityName),
+                AuthSHA.ID,  new OctetString(snmpv3AuthPassword),
+                PrivAES128.ID, new OctetString(snmpv3PrivatePassword));
+        usm.addUser(new OctetString(snmpv3SecurityName), null, user);
+
+        UdpAddress agentAddr = new UdpAddress(getHost() + "/" + getSnmpPort());
+        byte[] agentEID = snmpv3.discoverAuthoritativeEngineID(agentAddr, 1500);
+        if (agentEID == null) {
+            throw new IllegalStateException("Engine-ID discovery failed");
+        }
+
+        snmpv3target = new UserTarget<>();
+        snmpv3target.setAddress(agentAddr);
+        snmpv3target.setVersion(SnmpConstants.version3);
+        snmpv3target.setSecurityName(new OctetString(snmpv3SecurityName));
+        snmpv3target.setSecurityLevel(SecurityLevel.AUTH_PRIV);
+        snmpv3target.setAuthoritativeEngineID(agentEID);
+        snmpv3target.setRetries(2);
+        snmpv3target.setTimeout(2000);
+    }
+
+    /**
+     * Make an SNMPv3 query and retrieve remote OID value
+     *
+     * @param oid to retreive a value for
+     * @throws IOException if operation cannot be completed due to an IO issue
+     * */
+    private Collection<SnmpEntry> querySnmpv3(String oid) throws IOException {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Retrieving SNMPv3 OID: " + oid);
+        }
+        ScopedPDU pdu = new ScopedPDU();
+        pdu.setType(PDU.GET);
+        pdu.add(new VariableBinding(new OID(oid)));
+
+        ResponseEvent<?> ev = snmpv3.send(pdu, snmpv3target);
+        String response;
+        if (ev.getResponse() == null) {
+            response = "Timeout";
+            if (logger.isDebugEnabled()) {
+                logger.debug(String.format("OID %s retrieval timeout.", oid));
+            }
+        } else {
+            VariableBinding vb = ev.getResponse().get(0);
+            response = vb.getVariable().toString();
+            if (logger.isDebugEnabled()) {
+                logger.debug(String.format("OID %s retrieved successfully with value %s", oid, response));
+            }
+        }
+        SnmpEntry entry = new SnmpEntry();
+        entry.setOid(oid);
+        entry.setValue(response);
+        return Collections.singletonList(entry);
     }
 
     /**
