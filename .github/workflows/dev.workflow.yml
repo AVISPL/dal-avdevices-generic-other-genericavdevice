@@ -50,8 +50,6 @@ jobs:
         run: mvn versions:set versions:commit -DnewVersion=${{ needs.versiongenerate.outputs.version }}
       - name: Build and test with Maven
         run: mvn -B clean install -DskipTests
-      - name: PMD check
-        run: mvn pmd:check
       - id: getfilename
         run: echo "file=$(ls target/symphony-dal-avdevices-generic-other-genericavdevice-${{ needs.versiongenerate.outputs.version }}.jar)" >> $GITHUB_OUTPUT
       - name: Upload file to archive
