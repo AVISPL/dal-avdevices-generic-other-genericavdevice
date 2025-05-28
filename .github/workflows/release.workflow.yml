@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'release/**'
+      - 'bugfix/**'
 jobs:
   prep:
     runs-on: ubuntu-latest
@@ -52,8 +53,17 @@ jobs:
       - name: PMD check
         run: mvn pmd:check
       - id: getfilename
-        run: echo "file=$(ls target/symphony-dal-avdevices-generic-other-genericavdevice-${{ needs.versiongenerate.outputs.version }}.jar)" >> $GITHUB_OUTPUT
-      - uses: actions/upload-artifact@v4
+        run: echo "file=$(ls target/symphony-dal-avdevices-generic-other-genericavdevice-${{ needs.versiongenerate.outputs.version }}-jar-with-dependencies.jar)" >> $GITHUB_OUTPUT
+      - name: Remove suffix from filename
+        id: rename_file
+        run: |
+          original_file="${{ steps.getfilename.outputs.file }}"
+          new_file="${original_file/-jar-with-dependencies/}"
+          echo "new_file=${new_file}" >> $GITHUB_OUTPUT
+      - name: Rename file
+        run: mv "${{ steps.getfilename.outputs.file }}" "${{ steps.rename_file.outputs.new_file }}"
+      - name: Upload file to archive
+        uses: actions/upload-artifact@v4
         with:
           name: SNMPDevice
-          path: ${{ steps.getfilename.outputs.file }}
+          path: ${{ steps.rename_file.outputs.new_file }}
