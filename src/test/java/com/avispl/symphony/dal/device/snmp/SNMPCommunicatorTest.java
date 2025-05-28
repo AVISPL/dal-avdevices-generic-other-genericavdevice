@@ -108,9 +108,10 @@ public class SNMPCommunicatorTest {
         snmpCommunicator.setHost("10.151.52.249");
         snmpCommunicator.setSnmpProperties(".1.3.6.1.2.1.1.1.0:SystemDescription|.1.3.6.1.2.1.1.2.0:SystemID|.1.3.6.1.2.1.1.3.0:SystemUptime|.1.3.6.1.2.1.1.5.0:SystemName|.1.3.6.1.2.1.1.7.0:SystemServices|.1.3.6.1.2.1.1.6.0:SystemLocation");
         snmpCommunicator.setVersion("3");
-        snmpCommunicator.setSnmpv3SecurityName("_");
-        snmpCommunicator.setSnmpv3AuthPassword("_");
-        snmpCommunicator.setSnmpv3PrivatePassword("_");
+        snmpCommunicator.setSecurityName("");
+        snmpCommunicator.setAuthPassword("");
+        snmpCommunicator.setPrivatePassword("");
+        snmpCommunicator.setSecurityLevel("");
         snmpCommunicator.init();
         List<Statistics> statisticsList = snmpCommunicator.getMultipleStatistics();
         ExtendedStatistics statistics = (ExtendedStatistics) statisticsList.get(0);
