@@ -5,6 +5,8 @@ on:
     branches:
       - develop
       - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
 
 jobs:
   prep:
@@ -52,8 +54,7 @@ jobs:
         run: mvn -B clean install -DskipTests
       - id: getfilename
         run: echo "file=$(ls target/symphony-dal-avdevices-generic-other-genericavdevice-${{ needs.versiongenerate.outputs.version }}.jar)" >> $GITHUB_OUTPUT
-      - name: Upload file to archive
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: SNMPDevice
-          path: ${{ steps.rename_file.outputs.file }}
+          path: ${{ steps.getfilename.outputs.file }}

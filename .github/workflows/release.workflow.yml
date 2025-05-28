@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - 'release/**'
-      - 'bugfix/**'
 jobs:
   prep:
     runs-on: ubuntu-latest
@@ -19,7 +18,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: adopt
-          java-version: 8
+          java-version: 17
           overwrite-settings: false
       - id: date
         run: echo "date=$(date +'%y%m%d' | cut -c 2-)" >> $GITHUB_OUTPUT
@@ -44,16 +43,15 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: adopt
-          java-version: 8
+          java-version: 17
           overwrite-settings: false
       - name: Version set
         run: mvn versions:set versions:commit -DnewVersion=${{ needs.versiongenerate.outputs.version }}
       - name: Build and test with Maven
-        run: mvn -B clean install -DskipTestsk
+        run: mvn -B clean install -DskipTests
       - id: getfilename
         run: echo "file=$(ls target/symphony-dal-avdevices-generic-other-genericavdevice-${{ needs.versiongenerate.outputs.version }}.jar)" >> $GITHUB_OUTPUT
-      - name: Upload file to archive
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: SNMPDevice
-          path: ${{ steps.rename_file.outputs.file }}
+          path: ${{ steps.getfilename.outputs.file }}
