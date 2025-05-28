@@ -56,4 +56,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SNMPDevice
-          path: ${{ steps.rename_file.outputs.new_file }}
+          path: ${{ steps.rename_file.outputs.file }}
