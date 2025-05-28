@@ -6,7 +6,7 @@
 
     <groupId>com.avispl.symphony.dal.device.snmp</groupId>
     <artifactId>symphony-dal-avdevices-generic-other-genericavdevice</artifactId>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
     <properties>
         <symphonyApiVersion>RELEASE</symphonyApiVersion>
         <timestamp>${maven.build.timestamp}</timestamp>
@@ -75,23 +75,23 @@
         <dependency>
             <groupId>com.avispl.symphony.api</groupId>
             <artifactId>symphony-api-commons</artifactId>
-            <version>5.5.0</version>
+            <version>5.15.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/symphony-api-commons-5.5.0.jar</systemPath>
+            <systemPath>${basedir}/lib/symphony-api-commons-5.15.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.avispl.symphony.api</groupId>
             <artifactId>symphony-api-dal</artifactId>
-            <version>5.5.0</version>
+            <version>5.15.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/symphony-api-dal-5.5.0.jar</systemPath>
+            <systemPath>${basedir}/lib/symphony-api-dal-5.15.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.avispl.symphony.dal</groupId>
             <artifactId>symphony-dal-commons</artifactId>
-            <version>5.5.0</version>
+            <version>5.15.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/lib/symphony-dal-commons-5.5.0.jar</systemPath>
+            <systemPath>${basedir}/lib/symphony-dal-commons-5.15.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.icmp4j</groupId>
@@ -99,6 +99,12 @@
             <version>1018</version>
             <scope>system</scope>
             <systemPath>${basedir}/lib/icmp4j-1018.jar</systemPath>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.owasp.esapi/esapi -->
+        <dependency>
+            <groupId>org.owasp.esapi</groupId>
+            <artifactId>esapi</artifactId>
+            <version>2.0.1</version>
         </dependency>
 
         <!--dependencies of symphony-dal-commons-->
@@ -111,7 +117,7 @@
         <dependency>
             <groupId>org.snmp4j</groupId>
             <artifactId>snmp4j</artifactId>
-            <version>3.5.1</version>
+            <version>3.7.7</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -139,9 +145,12 @@
             <version>5.1.9.RELEASE</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.70</version>
+        </dependency>
     </dependencies>
-
-
     <repositories>
         <repository>
             <id>avi-spl.snapshots</id>
