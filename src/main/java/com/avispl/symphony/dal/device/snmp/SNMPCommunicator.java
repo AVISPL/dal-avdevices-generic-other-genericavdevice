@@ -21,6 +21,7 @@ import org.snmp4j.smi.VariableBinding;
 import org.snmp4j.transport.DefaultUdpTransportMapping;
 import com.avispl.symphony.dal.device.snmp.v3.LocalSecurityLevel;
 
+import javax.security.auth.login.FailedLoginException;
 import java.io.IOException;
 import java.util.*;
 
@@ -45,10 +46,6 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      */
     private long adapterInitializationTimestamp;
     /**
-     * Snmpv3 username
-     * */
-    private String securityName;
-    /**
      * Snmpv3 auth password
      * */
     private String authPassword;
@@ -62,9 +59,25 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      * */
     private String securityLevel;
     /**
+     * Authentication protocol for SNMPv3
+     * */
+    private String authenticationProtocol = "AuthSHA";
+    /**
+     * Privacy protocol for SNMPv3
+     * */
+    private String privacyProtocol = "PrivAES128";
+    /**
      * SNMP Version, 2c by default
      * */
     private String version = "2";
+    /**
+     *
+     * */
+    private String login;
+    /**
+     *
+     * */
+    private String password;
     /**
      * Instance of SNMPv3 client
      * */
@@ -73,6 +86,87 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      * UserTarget storage for snmpv3 configuration
      * */
     UserTarget<UdpAddress> snmpv3target;
+
+    /**
+     * Retrieves {@link #login}
+     *
+     * @return value of {@link #login}
+     */
+    public String getLogin() {
+        return login;
+    }
+
+    /**
+     * Sets {@link #login} value
+     *
+     * @param login new value of {@link #login}
+     */
+    public void setLogin(String login) {
+        this.login = login;
+    }
+
+    /**
+     * Retrieves {@link #password}
+     *
+     * @return value of {@link #password}
+     */
+    public String getPassword() {
+        return String.format("%s|%s", authPassword, privatePassword);
+    }
+
+    /**
+     * Sets {@link #password} value
+     *
+     * @param password new value of {@link #password}
+     */
+    public void setPassword(String password) {
+        if (password == null) {
+            return;
+        }
+        String[] passwords = password.split("\\|");
+        this.authPassword = passwords[0];
+        if (passwords.length == 2) {
+            this.privatePassword = passwords[1];
+        } else if (passwords.length > 2) {
+            throw new IllegalArgumentException("Password value is corrupted. Please make sure to only include SNMPv3 auth and private password, separated by a | character.");
+        }
+    }
+
+    /**
+     * Retrieves {@link #authenticationProtocol}
+     *
+     * @return value of {@link #authenticationProtocol}
+     */
+    public String getAuthenticationProtocol() {
+        return authenticationProtocol;
+    }
+
+    /**
+     * Sets {@link #authenticationProtocol} value
+     *
+     * @param authenticationProtocol new value of {@link #authenticationProtocol}
+     */
+    public void setAuthenticationProtocol(String authenticationProtocol) {
+        this.authenticationProtocol = authenticationProtocol;
+    }
+
+    /**
+     * Retrieves {@link #privacyProtocol}
+     *
+     * @return value of {@link #privacyProtocol}
+     */
+    public String getPrivacyProtocol() {
+        return privacyProtocol;
+    }
+
+    /**
+     * Sets {@link #privacyProtocol} value
+     *
+     * @param privacyProtocol new value of {@link #privacyProtocol}
+     */
+    public void setPrivacyProtocol(String privacyProtocol) {
+        this.privacyProtocol = privacyProtocol;
+    }
 
     /**
      * Retrieves {@link #securityLevel}
@@ -126,60 +220,6 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      */
     public void setSnmpProperties(String snmpProperties) {
         this.snmpProperties = snmpProperties;
-    }
-
-    /**
-     * Retrieves {@link #privatePassword}
-     *
-     * @return value of {@link #privatePassword}
-     */
-    public String getPrivatePassword() {
-        return privatePassword;
-    }
-
-    /**
-     * Sets {@link #privatePassword} value
-     *
-     * @param privatePassword new value of {@link #privatePassword}
-     */
-    public void setPrivatePassword(String privatePassword) {
-        this.privatePassword = privatePassword;
-    }
-
-    /**
-     * Retrieves {@link #authPassword}
-     *
-     * @return value of {@link #authPassword}
-     */
-    public String getAuthPassword() {
-        return authPassword;
-    }
-
-    /**
-     * Sets {@link #authPassword} value
-     *
-     * @param authPassword new value of {@link #authPassword}
-     */
-    public void setAuthPassword(String authPassword) {
-        this.authPassword = authPassword;
-    }
-
-    /**
-     * Retrieves {@link #securityName}
-     *
-     * @return value of {@link #securityName}
-     */
-    public String getSecurityName() {
-        return securityName;
-    }
-
-    /**
-     * Sets {@link #securityName} value
-     *
-     * @param securityName new value of {@link #securityName}
-     */
-    public void setSecurityName(String securityName) {
-        this.securityName = securityName;
     }
 
     @Override
@@ -322,18 +362,18 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      * @throws IOException if SNMP isn't initialized properly
      * @since 2.0.0
      * */
-    private void initSNMPv3() throws IOException {
-        if (StringUtils.isNullOrEmpty(securityName) && ("AUTH_PRIV".equals(securityLevel) || "AUTH_NOPRIV".equals(securityLevel))) {
-            throw new IllegalArgumentException("Invalid securityName: please check snmp version, security name or security level configured.");
+    private void initSNMPv3() throws IOException, FailedLoginException {
+        if (StringUtils.isNullOrEmpty(login) && ("AUTH_PRIV".equals(securityLevel) || "AUTH_NOPRIV".equals(securityLevel))) {
+            throw new FailedLoginException("Invalid login: please check snmp version, security name or security level configured.");
         }
         if (StringUtils.isNullOrEmpty(authPassword) && ("AUTH_PRIV".equals(securityLevel) || "AUTH_NOPRIV".equals(securityLevel))) {
-            throw new IllegalArgumentException("Invalid authPassword: please check snmp version, auth password or security level configured.");
+            throw new FailedLoginException("Invalid authPassword: please check snmp version, auth password or security level configured.");
         }
         if (StringUtils.isNullOrEmpty(privatePassword) && ("AUTH_PRIV".equals(securityLevel) || "NOAUTH_PRIV".equals(securityLevel))) {
-            throw new IllegalArgumentException("Invalid privatePassword: please check snmp version, private password or security level configured.");
+            throw new FailedLoginException("Invalid privatePassword: please check snmp version, private password or security level configured.");
         }
         if (StringUtils.isNullOrEmpty(securityLevel)) {
-            throw new IllegalArgumentException("Invalid securityLevel: please check snmp version or security level configured [AUTH_PRIV, NOAUTH_PRIV, NOAUTH_NOPRIV].");
+            throw new FailedLoginException("Invalid securityLevel: please check snmp version or security level configured [AUTH_PRIV, NOAUTH_PRIV, NOAUTH_NOPRIV].");
         }
 
         SecurityProtocols.getInstance().addAuthenticationProtocol( new AuthSHA());
@@ -352,10 +392,31 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
         snmpv3.getMessageDispatcher().addMessageProcessingModel(new MPv3(usm));
         transport.listen();
 
-        UsmUser user = new UsmUser(new OctetString(securityName),
-                AuthSHA.ID,  new OctetString(authPassword),
-                PrivAES128.ID, new OctetString(privatePassword));
-        usm.addUser(new OctetString(securityName), null, user);
+        if (login == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Security name is null, but compatible with current securityLevel - " + securityLevel);
+            }
+            login = "securityName";
+        }
+        if (authPassword == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Authentication password is null, but compatible with current securityLevel - " + securityLevel);
+            }
+            authPassword = "authPassword";
+        }
+        if (privatePassword == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Private password is null, but compatible with current securityLevel - " + securityLevel);
+            }
+            privatePassword = "privatePassword";
+        }
+        OID authenticationProtocol = retrieveAuthenticationProtocol();
+        OID privacyProtocol = retrievePrivacyProtocol();
+
+        UsmUser user = new UsmUser(new OctetString(login),
+                authenticationProtocol,  new OctetString(authPassword),
+                privacyProtocol, new OctetString(privatePassword));
+        usm.addUser(new OctetString(login), null, user);
 
         UdpAddress agentAddr = new UdpAddress(getHost() + "/" + getSnmpPort());
         byte[] agentEID = snmpv3.discoverAuthoritativeEngineID(agentAddr, 1500);
@@ -366,11 +427,57 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
         snmpv3target = new UserTarget<>();
         snmpv3target.setAddress(agentAddr);
         snmpv3target.setVersion(SnmpConstants.version3);
-        snmpv3target.setSecurityName(new OctetString(securityName));
+        snmpv3target.setSecurityName(new OctetString(login));
         snmpv3target.setSecurityLevel(LocalSecurityLevel.findLevelByName(securityLevel));
         snmpv3target.setAuthoritativeEngineID(agentEID);
         snmpv3target.setRetries(2);
         snmpv3target.setTimeout(2000);
+    }
+
+    /**
+     * Retrieve authentication protocol based on {@link #authenticationProtocol} variable
+     * AuthSHA is used by default - if the {@link #authenticationProtocol} is not supported or not provided
+     *
+     * @return OID of the selected privacy protocol
+     * */
+    private OID retrieveAuthenticationProtocol() {
+        switch (this.authenticationProtocol) {
+            case "AuthSHA":
+                return AuthSHA.ID;
+            case "AuthMD5":
+                return AuthMD5.ID;
+            case "AuthHMAC384SHA512":
+                return AuthHMAC384SHA512.ID;
+            case "AuthHMAC128SHA224":
+                return AuthHMAC128SHA224.ID;
+            case "AuthHMAC256SHA384":
+                return AuthHMAC256SHA384.ID;
+            case "AuthHMAC192SHA256":
+                return AuthHMAC192SHA256.ID;
+            default:
+                logger.warn(String.format("Cannot set authentication protocol to %s, switching to AuthSHA.", this.authenticationProtocol));
+                return AuthSHA.ID;
+        }
+    }
+
+    /**
+     * Retrieve privacy protocol based on {@link #privacyProtocol} variable
+     * PrivAES128 is used by default - if the {@link #privacyProtocol} is not supported or not provided
+     *
+     * @return OID of the selected privacy protocol
+     * */
+    private OID retrievePrivacyProtocol() {
+        switch (this.privacyProtocol) {
+            case "PrivAES128":
+                return PrivAES128.ID;
+            case "PrivAES192":
+                return PrivAES192.ID;
+            case "PrivAES256":
+                return PrivAES256.ID;
+            default:
+                logger.warn(String.format("Cannot set privacy protocol to %s, switching to PrivAES128.", this.privacyProtocol));
+                return PrivAES128.ID;
+        }
     }
 
     /**
@@ -390,7 +497,12 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
 
         ResponseEvent<?> ev = snmpv3.send(pdu, snmpv3target);
         String response;
-        if (ev.getResponse() == null) {
+        if (ev.getResponse() != null && ev.getResponse().toString().startsWith("REPORT")) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(String.format("Unable to retrieve oid %s value: REPORT received: %s", oid, ev.getResponse().toString()));
+            }
+            response = "N/A";
+        } else if (ev.getResponse() == null) {
             response = "Timeout";
             if (logger.isDebugEnabled()) {
                 logger.debug(String.format("OID %s retrieval timeout.", oid));

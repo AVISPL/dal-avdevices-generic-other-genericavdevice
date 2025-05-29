@@ -13,10 +13,10 @@ import org.snmp4j.transport.DefaultUdpTransportMapping;
 public class SnmpV3Tester {
 
     // ── Credentials & target ───────────────────────────────────────────────────
-    private static final String USER       = "_";
-    private static final String AUTH_PWD   = "_";
-    private static final String PRIV_PWD   = "_";
-    private static final String TARGET_IP  = "_/161";   // <-- change
+    private static final String USER       = "-";
+    private static final String AUTH_PWD   = "-";
+    private static final String PRIV_PWD   = "-";
+    private static final String TARGET_IP  = "-/161";   // <-- change
     private static final OID    SYS_DESCR  = new OID("1.3.6.1.2.1.1.1.0");
     private static final OID    ENGINE_TIME=
             new OID("1.3.6.1.6.3.10.2.1.3.0");  // snmpEngineTime.0
