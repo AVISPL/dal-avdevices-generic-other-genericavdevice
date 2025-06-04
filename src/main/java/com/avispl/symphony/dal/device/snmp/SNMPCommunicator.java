@@ -83,6 +83,10 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
      * */
     Snmp snmpv3;
     /**
+     * Snmpv3 transport reference
+     * */
+    TransportMapping<UdpAddress> snmpv3Transport;
+    /**
      * UserTarget storage for snmpv3 configuration
      * */
     UserTarget<UdpAddress> snmpv3target;
@@ -241,8 +245,13 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
     protected void internalDestroy() {
         try {
             snmpv3target = null;
+            if (snmpv3Transport != null && snmpv3Transport.isListening()) {
+                snmpv3Transport.close();
+                snmpv3Transport = null;
+            }
             if (snmpv3 != null) {
                 snmpv3.close();
+                snmpv3 = null;
             }
         } catch (IOException e) {
             throw new RuntimeException("Exception during SNMPv3 client termination", e);
@@ -254,11 +263,22 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
     @Override
     public List<Statistics> getMultipleStatistics() throws Exception {
         ExtendedStatistics extendedStatistics = new ExtendedStatistics();
+
         Map<String, String> statistics = fetchSNMPProperties();
         statistics.put("AdapterMetadata#AdapterVersion", adapterProperties.getProperty("adapter.version"));
         statistics.put("AdapterMetadata#AdapterBuildDate", adapterProperties.getProperty("adapter.build.date"));
         statistics.put("AdapterMetadata#AdapterUptime", normalizeUptime((System.currentTimeMillis() - adapterInitializationTimestamp) / 1000));
         statistics.put("AdapterMetadata#SNMPVersion", String.valueOf(version));
+        boolean snmpv3 = Objects.equals(version, "3");
+        if (snmpv3 && StringUtils.isNotNullOrEmpty(authenticationProtocol)) {
+            statistics.put("AdapterMetadata#AuthenticationProtocol", authenticationProtocol);
+        }
+        if (snmpv3 && StringUtils.isNotNullOrEmpty(securityLevel)) {
+            statistics.put("AdapterMetadata#SecurityLevel", securityLevel);
+        }
+        if (snmpv3 && StringUtils.isNotNullOrEmpty(privacyProtocol)) {
+            statistics.put("AdapterMetadata#PrivacyProtocol", privacyProtocol);
+        }
 
         extendedStatistics.setStatistics(statistics);
         return Collections.singletonList(extendedStatistics);
@@ -350,9 +370,7 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
                 result.put(propertyName, variableValue.trim());
             });
         }
-        if (version.equals("3")) {
-            snmpv3.close();
-        }
+
         return result;
     }
 
@@ -387,36 +405,37 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
                 new OctetString(MPv3.createLocalEngineID()), 0);
         SecurityModels.getInstance().addSecurityModel(usm);
 
-        TransportMapping<UdpAddress> transport = new DefaultUdpTransportMapping();
-        snmpv3 = new Snmp(transport);
-        snmpv3.getMessageDispatcher().addMessageProcessingModel(new MPv3(usm));
-        transport.listen();
+        if (snmpv3Transport == null || !snmpv3Transport.isListening()) {
+            snmpv3Transport = new DefaultUdpTransportMapping();
+            snmpv3Transport.listen();
 
-        if (login == null) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Security name is null, but compatible with current securityLevel - " + securityLevel);
-            }
-            login = "securityName";
+            snmpv3 = new Snmp(snmpv3Transport);
         }
-        if (authPassword == null) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Authentication password is null, but compatible with current securityLevel - " + securityLevel);
-            }
-            authPassword = "authPassword";
+        if (snmpv3 == null) {
+            snmpv3 = new Snmp(snmpv3Transport);
         }
-        if (privatePassword == null) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Private password is null, but compatible with current securityLevel - " + securityLevel);
-            }
-            privatePassword = "privatePassword";
+        snmpv3.getMessageDispatcher().addMessageProcessingModel(new MPv3(usm));
+
+        OctetString loginOctet = null;
+        OctetString authPasswordOctet = null;
+        OctetString privPasswordOctet = null;
+
+        if (StringUtils.isNotNullOrEmpty(login)) {
+            loginOctet = new OctetString(login);
+        }
+        if (StringUtils.isNotNullOrEmpty(authPassword)) {
+            authPasswordOctet = new OctetString(authPassword);
+        }
+        if (StringUtils.isNotNullOrEmpty(privatePassword)) {
+            privPasswordOctet = new OctetString(privatePassword);
         }
         OID authenticationProtocol = retrieveAuthenticationProtocol();
         OID privacyProtocol = retrievePrivacyProtocol();
 
-        UsmUser user = new UsmUser(new OctetString(login),
-                authenticationProtocol,  new OctetString(authPassword),
-                privacyProtocol, new OctetString(privatePassword));
-        usm.addUser(new OctetString(login), null, user);
+        UsmUser user = new UsmUser(loginOctet,
+                authPasswordOctet == null ? null : authenticationProtocol,  authPasswordOctet,
+                privPasswordOctet == null ? null : privacyProtocol, privPasswordOctet);
+        usm.addUser(loginOctet, null, user);
 
         UdpAddress agentAddr = new UdpAddress(getHost() + "/" + getSnmpPort());
         byte[] agentEID = snmpv3.discoverAuthoritativeEngineID(agentAddr, 1500);
@@ -474,6 +493,10 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
                 return PrivAES192.ID;
             case "PrivAES256":
                 return PrivAES256.ID;
+            case "PrivDES":
+                return PrivDES.ID;
+            case "Priv3DES":
+                return Priv3DES.ID;
             default:
                 logger.warn(String.format("Cannot set privacy protocol to %s, switching to PrivAES128.", this.privacyProtocol));
                 return PrivAES128.ID;
@@ -503,7 +526,7 @@ public class SNMPCommunicator extends BaseDevice implements Monitorable {
             }
             response = "N/A";
         } else if (ev.getResponse() == null) {
-            response = "Timeout";
+            response = "Request timed out";
             if (logger.isDebugEnabled()) {
                 logger.debug(String.format("OID %s retrieval timeout.", oid));
             }
