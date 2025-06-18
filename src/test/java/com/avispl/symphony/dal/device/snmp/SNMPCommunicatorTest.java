@@ -102,4 +102,27 @@ public class SNMPCommunicatorTest {
         Assertions.assertEquals("NH-SX80", statisticsMap.get("SystemName"));
         Assertions.assertEquals("72", statisticsMap.get("SystemServices"));
     }
+
+    @Test
+    public void testSnmpV3PropertiesRemoteLinux() throws Exception {
+        snmpCommunicator.setHost("10.151.52.249");
+        snmpCommunicator.setSnmpProperties("1.3.6.1.4.1.21317.1.3.2.2.3.4.6.3:Subnet Mask|.1.3.6.1.2.1.1.1.0:Hardware|.1.3.6.1.2.1.1.4.0:Name|.1.3.6.1.2.1.1.5.0:Device Name|.1.3.6.1.2.1.1.6.0:Location|.1.3.6.1.2.1.2.2.1.2.20:Network|.1.3.6.1.2.1.1.1.0:System Description|.1.3.6.1.2.1.1.2.0:SystemID|.1.3.6.1.2.1.1.3.0:System Uptime|.1.3.6.1.2.1.1.5.0:System Name|.1.3.6.1.2.1.1.7.0:System Services|.1.3.6.1.2.1.1.6.0:System Location");
+        snmpCommunicator.setVersion("3");
+        snmpCommunicator.setLogin("");
+        snmpCommunicator.setPassword("");
+        snmpCommunicator.setSecurityLevel("AUTH_PRIV");
+        snmpCommunicator.init();
+        List<Statistics> statisticsList = snmpCommunicator.getMultipleStatistics();
+        ExtendedStatistics statistics = (ExtendedStatistics) statisticsList.get(0);
+        Map<String, String> statisticsMap = statistics.getStatistics();
+        Assertions.assertNotNull(statisticsMap.get("AdapterMetadata#AdapterBuildDate"));
+        Assertions.assertNotNull(statisticsMap.get("AdapterMetadata#AdapterUptime"));
+        Assertions.assertNotNull(statisticsMap.get("AdapterMetadata#AdapterVersion"));
+
+        Assertions.assertEquals("Linux sim01-device-sim 6.1.127-135.201.amzn2023.x86_64 #1 SMP PREEMPT_DYNAMIC Tue Jan 28 23:19:58 UTC 2025 x86_64", statisticsMap.get("SystemDescription"));
+        Assertions.assertNotNull(statisticsMap.get("SystemUptime"));
+        Assertions.assertEquals("1.3.6.1.4.1.8072.3.2.10", statisticsMap.get("SystemID"));
+        Assertions.assertEquals("sim01-device-sim", statisticsMap.get("SystemName"));
+        Assertions.assertEquals("noSuchInstance", statisticsMap.get("SystemServices"));
+    }
 }
